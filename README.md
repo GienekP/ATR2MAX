@@ -1,7 +1,7 @@
 # ATR2MAX
 Convert ATARI ATR files to Atarimax 128 KB Flash cartridge
 
-Atarimax 128 KB Flash cartridge to cart gdzie mamy tylko jeden bank. Z jednej strony jest to zaleta, bo za dużo nam się danych nie przełącza (mniejsze szanse na migotanie obrazu), no ale z drugiej strony trzeba jakoś się zmieścić z danymi i kodem obsługi carta. Kopiowanie procedur do RAM nie wchodzi w grę, bo zwykle tego miejsca nie ma. Dlatego maksymalnie dużo trzeba ogarnąć w pamięci carta.
+Atarimax 128 KB Flash cartridge to cart gdzie mamy tylko jeden przełączany obszar. Z jednej strony jest to zaleta, bo za dużo nam się danych nie przełącza (mniejsze szanse na migotanie obrazu), no ale z drugiej strony trzeba jakoś się zmieścić z danymi i kodem obsługi carta. Kopiowanie procedur do RAM nie wchodzi w grę, bo zwykle tego miejsca nie ma. Dlatego maksymalnie dużo trzeba ogarnąć w pamięci carta.
 
 Bank 0 jest uprzywilejowany. Zawiera procedurę startową i mapę sektorów. Każdy inny bank zawiera sektory oraz 256 blok na końcu z kodem obsługi. Kod obsługi wszędzie jest taki sam, więc jest odporny na przełączanie banków.
 
