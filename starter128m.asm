@@ -20,7 +20,6 @@ DMACTLS = $022F
 PDVMSK  = $0247
 MEMTOP  = $02E5
 DVSTAT  = $02EA
-
 DDEVIC  = $0300
 DUNIT   = $0301
 DCMND   = $0302
@@ -104,28 +103,23 @@ ROM2RAM	lda #$C0
 		sta TMP+1
 		ldy #$00
 		sty TMP
-L3		lda (TMP),Y
-		tax 
-		lda #$FE
-		and PORTB
-		sta PORTB
-		txa 
+		ldx #$FF			
+CPOS	stx PORTB
+		lda (TMP),Y
+		dex
+		stx PORTB
 		sta (TMP),Y
-		lda #$01
-		ora PORTB
-		sta PORTB
+		inx
 		iny
-		bne L3
-NOK		inc TMP+1
-		clc
+		bne CPOS
+		inc TMP+1
 		lda TMP+1
 		cmp #$D0
-		bcc T1
-		cmp #$D8
-		bcc NOK
-T1		cmp #$00
-		bne L3
-		clc 
+		bne OSOK
+		lda #$D8
+		sta TMP+1
+OSOK	cmp #$00
+		bne CPOS
 		rts
 		
 ;-----------------------------------------------------------------------		
@@ -200,8 +194,6 @@ FINAL 	lda #$1F
 		sta MEMTOP+1
 		lda #$C0
 		sta RAMTOP
-		lda #$01
-		sta PDVMSK
 VCL1	lda VCOUNT
 		cmp #$3
 		bne VCL1
@@ -235,14 +227,14 @@ PDVRS   = $0248
 SIO     = $E971
 
 		lda #$01
-		sta CRITIC
+		jmp RAMPROC		;sta CRITIC
 		lda DUNIT
 		pha
 		lda PDVMSK
 		beq FOUND
 		ldx #$08
-NEXT 	jsr RAMPROC	; jsr GETLOW
-		beq END 	; beq FOUND
+NEXT 	jsr GETLOW
+		beq FOUND
 		txa
 		pha
 		jsr PDIOR
@@ -285,19 +277,18 @@ CPYSEC	txa	; $010F
 		dey
 		bpl CPYSEC
 		
-		ldy #$01
-		sty DSTATS	
+		ldy DSTATS	
 				
-BACK	lda #$FF	; $0123
+BACK	lda #$FF
 		sta $D510	; MaxFlash OFF
 		lda TRIG3
 		sta GINTLK
 		rts
+
+GOSIO	jsr RAMPROC+BACK-ZEROCP
+		jmp $C95B
 		
-GOBOOT	lda #$FF	; $012F
-		sta $D510	; MaxFlash OFF
-		lda TRIG3
-		sta GINTLK
+GOBOOT	jsr RAMPROC+BACK-ZEROCP
 		jsr BOOT
 		jmp RESETWM
 		
@@ -310,7 +301,20 @@ ZEROEND
 ;-----------------------------------------------------------------------		
 ; AROUND SIO INTerface
 
-AROUND	lda DCMND
+AROUND  clc
+		lda DDEVIC
+		and #$F0
+		adc DUNIT
+		cmp #$31
+		beq D1
+		lda #$01
+		sta CRITIC
+		lda DUNIT
+		pha
+		jmp RAMPROC+GOSIO-ZEROCP					
+D1		lda #$00
+		sta CRITIC	
+		lda DCMND
 		cmp #$52
 		beq SECREAD
 		cmp #$57
@@ -318,14 +322,24 @@ AROUND	lda DCMND
 		cmp #$50
 		beq STATOK
 		cmp #$53
-		bne UNKWCMD
+		bne UNKWCMD		
+        lda #<DVSTAT
+        sta DBUFA
+        lda #>DVSTAT
+        sta DBUFA+1
+        ldx #$03
+CPSTAT  lda D1STAT,x
+        sta DVSTAT,x
+        dex
+        bpl CPSTAT		
 STATOK	ldy #$01
 		sty DSTATS
 UNKWCMD	jmp RAMPROC+BACK-ZEROCP
-SECREAD	ldy #$00
+SECREAD	lda #$01
+		sta DSTATS
+		ldy #$00
 		sty $D500	; Bank 0
-		sty $D520
-		
+		sty $D520		
 		lda DAUX1
 		asl 
 		sta TMP
@@ -334,25 +348,21 @@ SECREAD	ldy #$00
 		and #$1F
 		clc
 		adc #$A0
-		sta TMP+1
-		
+		sta TMP+1		
 		lda (TMP),Y
 		sta TMP+2
 		iny
 		lda (TMP),Y
-		sta TMP+3
-		
+		sta TMP+3	
 		and #$01
 		beq NOHALF
 		lda #$80
 NOHALF	sta TMP
-
 		lda TMP+3
 		lsr
 		clc
 		adc #$A0
-		sta TMP+1
-		
+		sta TMP+1		
 		lda TMP+2
 		lsr
 		lsr
@@ -360,18 +370,17 @@ NOHALF	sta TMP
 		lsr
 		tax
 		sta $D520,X	; SIDE for MaxFlash+ & SimpleCART
-
 		lda TMP+2	; Bank -> X
 		and #$0F
-		tax		
-		
+		tax				
 		lda DBUFA
 		sta TMP+2
 		lda DBUFA+1
 		sta TMP+3	
-
 		ldy #$7F
 		jmp RAMPROC+CPYSEC-ZEROCP
+		
+D1STAT  dta $98,$ff,$01,$00
 
 ;-----------------------------------------------------------------------		
 
